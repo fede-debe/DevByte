@@ -16,3 +16,34 @@
  */
 
 package com.example.android.devbyteviewer.repository
+
+import com.example.android.devbyteviewer.database.VideosDatabase
+import com.example.android.devbyteviewer.network.Network
+import com.example.android.devbyteviewer.network.asDatabaseModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+/**
+ * Repository are just regular classes(no extensions/no annotations), they are responsible for providing a simple API to our data sources. We'll need a videoDatabase for the
+ * repository and we'll ask users to pass it as a constructor parameter(simple form of concept called DEPENDENCY INJECTION. By taking a database object as a constructor parameter,
+ * we don't need to keep a reference to Android context in the repository, potentially causing leaks. Here I will split the API into 2 parts: one to load videos from the offline
+ * cache and another to refresh the offline cache.
+ */
+
+class VideosRepository(private val database: VideosDatabase) {
+
+    /**
+     * It doesn't return anything, it's not accidentally used as the API to fetch videos, it's just responsible for updating the offline cache. It is a
+     * suspend method because I will call it from a coroutine. We are going to make a Database call to save the new videos to the database. Inside the IO thread we need to make a
+     * network call, we ask the network to get the playlist and use the await function to tell the coroutine to suspend until it's available. As this executes, you can be sure that the
+     * result of getPlaylist() is always available, but it doesn't block this thread while waiting for it. This is because await is a suspended function. Then we make the database
+     * call by using insertAll on videoDao. To keep the separation of concerns, we'll need to map  the  network results to database objects using ".asDatabaseModel".
+     */
+    // refresh the offline cache
+    suspend fun refreshVideos() {
+        withContext(Dispatchers.IO) {
+            val playlist = Network.devbytes.getPlaylist().await()
+            database.videoDao.insertAll(*playlist.asDatabaseModel())
+        }
+    }
+}
