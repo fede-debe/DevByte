@@ -17,7 +17,11 @@
 
 package com.example.android.devbyteviewer.repository
 
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.Transformations
 import com.example.android.devbyteviewer.database.VideosDatabase
+import com.example.android.devbyteviewer.database.asDomainModel
+import com.example.android.devbyteviewer.domain.Video
 import com.example.android.devbyteviewer.network.Network
 import com.example.android.devbyteviewer.network.asDatabaseModel
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +35,15 @@ import kotlinx.coroutines.withContext
  */
 
 class VideosRepository(private val database: VideosDatabase) {
+
+    /**
+     * Main interface for the Repository. This is the property that everyone can use to observe videos from the repository. I need to run the database Query "getVideos()" and it
+     * give me a LiveData with a database video and we only need a video. We use Transformation.map(let us convert from a LiveData to another) to map from database video to video.
+     * I can use the helper ".asDomainModel" to convert a database video to a video. The Transformation will only happen when an activity or fragment is listening, so we can
+     * declare this property safely*/
+    val videos: LiveData<List<Video>> =  Transformations.map(database.videoDao.getVideos()) {
+        it.asDomainModel()
+    }
 
     /**
      * It doesn't return anything, it's not accidentally used as the API to fetch videos, it's just responsible for updating the offline cache. It is a
